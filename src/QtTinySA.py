@@ -52,6 +52,7 @@ from modules.exporters import WWBExporter, WSMExporter
 from modules.graphs import SurfaceGraph, PhaseNoiseGraph, SpectrumGraph, PolarGraph
 from modules.devices import USBdevice, Worker, WorkerSignals
 from modules.utility import resource_path, Calc
+from modules.wireless_presets import CHANNEL_SPANS_MHZ, ensure_wireless_presets
 
 # Defaults to non local configuration/data dirs - needed for packaging
 if system() == "Linux":
@@ -790,6 +791,7 @@ class Database:
         query.clear()
 
         self.upgraded = self.check_version()
+        ensure_wireless_presets(self.db)
         return self.db
 
     def close(self):
@@ -2059,6 +2061,8 @@ class Analyser(QtCore.QObject):
 
     def band_changed(self):
         index = self.ui.band_box.currentIndex()
+        if index < 0:
+            return
         startF = self.data.bandselect.tm.record(index).value('StartF')
         stopF = self.data.bandselect.tm.record(index).value('StopF')
         if stopF not in (0, '', startF):
@@ -2076,6 +2080,7 @@ class Analyser(QtCore.QObject):
                 if type_stop not in (0, '', startF):
                     span = (type_stop - type_start) / 1e6
                     break
+            span = CHANNEL_SPANS_MHZ.get(self.ui.filterBox.currentText(), span)
             with QSignalBlocker(self.ui.centre_freq):
                 self.ui.centre_freq.setValue(centreF)
             with QSignalBlocker(self.ui.span_freq):
